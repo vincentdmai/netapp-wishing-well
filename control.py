@@ -2,11 +2,17 @@ import pika
 import pymongo
 import time
 import sys
+import json
+import pprint
+import copy
 
-#TODO
+#TODO: Initialization of User Login
 #Change these later too
 username = 'tom_swift'
 password = 'flying_lab'
+
+
+
 
 def rabbit_set_up(IP, PORT) :
     credentials = pika.PlainCredentials(username, password)
@@ -21,57 +27,63 @@ def rabbit_set_up(IP, PORT) :
         pika.ConnectionParameters(host='localhost'))
     channel = connection.channel()
     print("[Ctrl 01] - Connecting to RabbitMQ instance on " + IP + " with port " + PORT)
-
-
-
+ 
+    listPairExQu = []
+ 
     #Creating squires exchange
     channel.exchange_declare(exchange='Squires', exchange_type='direct')
     
     #Creating food queue and binding to squires exchange
     food_queue = channel.queue_declare(queue='Food', exclusive=True)
     channel.queue_bind(exchange='Squires', queue='Food', routing_key='Food')
-
+    listPairExQu.append("Squires:Food")
+ 
     #Creating meetings queue and binding to squires exchange
     meetings_queue = channel.queue_declare(queue='Meetings', exclusive=True)
     channel.queue_bind(exchange='Squires', queue='Meetings', routing_key='Meetings')
-
+    listPairExQu.append("Squires:Meetings")
+ 
     #Creating rooms queue and binding to squires exchange
     rooms_queue = channel.queue_declare(queue='Rooms', exclusive=True)
     channel.queue_bind(exchange='Squires', queue='Rooms', routing_key='Rooms')
-
-
-
+    listPairExQu.append("Squires:Rooms")
+ 
     #Creating goodwin exchange
     channel.exchange_declare(exchange='Goodwin', exchange_type='direct')
     
     #Creating classrooms queue and binding to goodwin exchange
     classrooms_queue = channel.queue_declare(queue='Classrooms', exclusive=True)
     channel.queue_bind(exchange='Goodwin', queue='Classrooms', routing_key='Classrooms')
-
+    listPairExQu.append("Goodwin:Classrooms")
+ 
     #Creating auditorium queue and binding to goodwin exchange
     auditorium_queue = channel.queue_declare(queue='Auditorium', exclusive=True)
     channel.queue_bind(exchange='Goodwin', queue='Auditorium', routing_key='Auditorium')
-
-
-
-
+    listPairExQu.append("Goodwin:Auditorium")
+ 
     #Creating library exchange
     channel.exchange_declare(exchange='Library', exchange_type='direct')
     
     #Creating noise queue and binding to library exchange
     noise_queue = channel.queue_declare(queue='Noise', exclusive=True)
     channel.queue_bind(exchange='Library', queue='Noise', routing_key='Noise')
-
+    listPairExQu.append("Library:Noise")
+ 
     #Creating seating queue and binding to library exchange
     seating_queue = channel.queue_declare(queue='Seating', exclusive=True)
     channel.queue_bind(exchange='Library', queue='Seating', routing_key='Seating')
-
+    listPairExQu.append("Library:Seating")
+ 
     #Creating wishes queue and binding to library exchange
     wishes_queue = channel.queue_declare(queue='Wishes', exclusive=True)
     channel.queue_bind(exchange='Library', queue='Wishes', routing_key='Wishes')
+    listPairExQu.append("Library:Wishes")
+ 
+    #Print statement for queues and exchanges pairs
+    print("[Ctrl 02] - Initialized Exchanges and Queues: ", listPairExQu)
 
-    #TODO
-    #Add print statement for queues and exchanges
+    #Returning Channel to call later
+    return channel
 
 
 def mongo_set_up() :
@@ -92,6 +104,16 @@ def mongo_set_up() :
     wishes = library_db['wishes-collection']
 
     print("[Ctrl 03] - Initialized MongoDB datastore")
+
+
+# Callback Method for Channel Consuming 
+def callback(ch, method, properties, body):
+    print('In Basic_Consume: Accessing CallBack...')
+    if body:
+        global CALLBACK_BODY
+        CALLBACK_BODY = body.decode('ascii')
+        ch.stop_consuming()
+    
 
 
 if __name__ == '__main__':
@@ -118,7 +140,7 @@ if __name__ == '__main__':
             sys.exit()
 
     #set up rabbitMQ
-    rabbit_set_up(repo_IP, repo_PORT)
+    channel = rabbit_set_up(repo_IP, repo_PORT)
     #set up mongoDB
     mongo_set_up()
 
@@ -130,55 +152,95 @@ if __name__ == '__main__':
             print("[Ctrl 08] - Exiting")
         else :
             first_split = inp.split(':')
-            second_split = first_split[1].split('+')
-            third_split = second_split[1].split(' ')
-
             action = first_split[0]
-            place = second_split[0]
-            subject = third_split[0]
-            msgID = "23$" + str(time.time())
-
             client = pymongo.MongoClient()
-            db = client[place]
-
             if (action == 'p') :
-                message = third_split[1]
+                '''
+                Cmd Line Parsing Logic
+                '''
+                second_split = first_split[1].split('+')
+                third_split = second_split[1].split(' ')
+                
 
-                post = {"Action": action,
-                        "Place": place,
-                        "MsgID": msgID,
-                        "Subject": subject,
-                        "Message": message}
+                
+                place = second_split[0]
+                subject = third_split[0]
+                msgID = "23$" + str(time.time())
+                db = client[place]
+                
+                separator = ' '
+                message = separator.join(third_split[1:])
+                message = message.replace('"', '')
+                '''
+                End of CMD Line Parsing Logic
+                '''
+
+                post = {
+                        'Action': action,
+                        'Place': place,
+                        'MsgID': msgID,
+                        'Subject': subject,
+                        'Message': message
+                    }
+                printPost = copy.copy(post)
+
+
                 posts = db.posts
                 post_id = posts.insert_one(post)
 
-                #TODO
-                #Change this message
-                print("[Ctrl 05] – Inserted command into MongoDB: <MONGODB FORMAT INFO>")
 
                 #TODO
-                #Fix the print and add the produce functionality
-                print("[Ctrl 06] - Produced message “<MESSAGE>” on <EXCHANGE:QUEUE>")
+                # Printing Input Command String
+                print("[Ctrl 05] – Inserted command into MongoDB: " + inp)
+
+                # Printing Post in Pretty Print JSON format
+                pprint.pprint(printPost, indent=2)
+                
+                #TODO
+                # Establishes basic publish such that a body is 'published' within the specified queue for later consumption.
+                channel.basic_publish(exchange = place, routing_key = subject, body=message)
+                print("[Ctrl 06] - Produced message '" + message + "' on <" + place.upper() + ":" + subject.upper() + ">")
+            
             elif (action == 'c') :
-                #TODO
-                #get the message from the consume so change this from the temp
-                message = 'temp'
+                '''
+                Parsing CMD Line
+                '''
+                second_split = first_split[1].split('+')
+                place = second_split[0]
+                subject = second_split[1]
+                msgID = "23$" + str(time.time())
+                db = client[place]
+                '''
+                End of Parsing CMD Line
+                '''
 
-                post = {"Action": action,
-                        "Place": place,
-                        "MsgID": msgID,
-                        "Subject": subject,
-                        "Message": message}
+                post = {
+                        'Action': action,
+                        'Place': place,
+                        'MsgID': msgID,
+                        'Subject': subject
+                    }
+                printPost = copy.copy(post)
                 posts = db.posts
                 post_id = posts.insert_one(post)
 
                 #TODO
-                #Change this message
-                print("[Ctrl 05] – Inserted command into MongoDB: <MONGODB FORMAT INFO>")
+                # Printing Input Command String
+                print("[Ctrl 05] – Inserted command into MongoDB: " + inp)
+
+                # Printing Post in Pretty Print JSON format
+                pprint.pprint(printPost, indent=2)
 
                 #TODO
-                #Fix the print and add the consume functionality
-                print("[Ctrl 07] - Consumed message “<MESSAGE>” on <EXCHANGE:QUEUE>")
+                # Consume from RabbitMQ. Establishing basic consume connection and then accessing callback to obtain the message from
+                # a specific queue.
+                # The message is then printed out on the command line. 
+                channel.basic_consume(on_message_callback=callback, queue=subject, auto_ack=True)
+                
+                channel.start_consuming()
+                print("[Ctrl 06] - Consumed message '" + CALLBACK_BODY + "' on <" + place.upper() + ":" + subject.upper() + ">")
+
+    
 
 
 
