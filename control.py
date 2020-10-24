@@ -20,8 +20,8 @@ def rabbit_set_up(IP, PORT) :
     #TODO
     #change localhost later to the repo IP
     #Replace the lower lines with these when we figure out the port and ip and credentials stuff
-    #parameters = pika.ConnectionParameters(IP, PORT, '/', credentials)
-    #connection = pika.BlockingConnection(parameters)
+    #connection = pika.BlockingConnection(parameters)parameters = pika.ConnectionParameters(IP, PORT, '/', credentials)
+    #
     #
     connection = pika.BlockingConnection(
         pika.ConnectionParameters(host='localhost'))
@@ -108,7 +108,7 @@ def mongo_set_up() :
 
 # Callback Method for Channel Consuming 
 def callback(ch, method, properties, body):
-    print('In Basic_Consume: Accessing CallBack...')
+    
     if body:
         global CALLBACK_BODY
         CALLBACK_BODY = body.decode('ascii')
@@ -145,10 +145,10 @@ if __name__ == '__main__':
     mongo_set_up()
 
     inp = ''
-    while(inp != 'Exit') :
+    while(inp.lower() != 'exit') :
         inp = input("[Ctrl 04] -> Enter a command: ")
 
-        if (inp == 'Exit') : 
+        if (inp.lower() == 'exit') : 
             print("[Ctrl 08] - Exiting")
         else :
             first_split = inp.split(':')
