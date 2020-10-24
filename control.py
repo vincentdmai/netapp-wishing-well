@@ -8,8 +8,8 @@ import copy
 
 #TODO: Initialization of User Login
 #Change these later too
-username = 'tom_swift'
-password = 'flying_lab'
+username = 'justmalvince'
+password = 'team23'
 
 
 
@@ -20,13 +20,17 @@ def rabbit_set_up(IP, PORT) :
     #TODO
     #change localhost later to the repo IP
     #Replace the lower lines with these when we figure out the port and ip and credentials stuff
-    #connection = pika.BlockingConnection(parameters)parameters = pika.ConnectionParameters(IP, PORT, '/', credentials)
+    parameters = pika.ConnectionParameters(IP, PORT, '/', credentials)
+    connection = pika.BlockingConnection(parameters)
+    
     #
     #
+    '''
     connection = pika.BlockingConnection(
         pika.ConnectionParameters(host='localhost'))
+    '''
     channel = connection.channel()
-    print("[Ctrl 01] - Connecting to RabbitMQ instance on " + IP + " with port " + PORT)
+    print("[Ctrl 01] - Connecting to RabbitMQ instance on " + IP + " with port " + str(PORT))
  
     listPairExQu = []
  
