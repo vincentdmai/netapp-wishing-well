@@ -238,7 +238,7 @@ if __name__ == '__main__':
                 channel.basic_consume(on_message_callback=callback, queue=subject, auto_ack=True)
                 
                 channel.start_consuming()
-                print("[Ctrl 06] - Consumed message '" + CALLBACK_BODY + "' on <" + place.upper() + ":" + subject.upper() + ">")
+                print("[Ctrl 07] - Consumed message '" + CALLBACK_BODY + "' on <" + place.upper() + ":" + subject.upper() + ">")
 
     
 
