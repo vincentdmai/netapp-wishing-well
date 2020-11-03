@@ -34,17 +34,17 @@ def rabbit_set_up(IP, PORT) :
     channel.exchange_declare(exchange='Squires', exchange_type='direct')
     
     #Creating food queue and binding to squires exchange
-    channel.queue_declare(queue='Food', exclusive=True)
+    channel.queue_declare(queue='Food', durable=True)
     channel.queue_bind(exchange='Squires', queue='Food', routing_key='Food')
     listPairExQu.append("Squires:Food")
  
     #Creating meetings queue and binding to squires exchange
-    channel.queue_declare(queue='Meetings', exclusive=True)
+    channel.queue_declare(queue='Meetings')
     channel.queue_bind(exchange='Squires', queue='Meetings', routing_key='Meetings')
     listPairExQu.append("Squires:Meetings")
  
     #Creating rooms queue and binding to squires exchange
-    channel.queue_declare(queue='Rooms', exclusive=True)
+    channel.queue_declare(queue='Rooms')
     channel.queue_bind(exchange='Squires', queue='Rooms', routing_key='Rooms')
     listPairExQu.append("Squires:Rooms")
  
@@ -52,12 +52,12 @@ def rabbit_set_up(IP, PORT) :
     channel.exchange_declare(exchange='Goodwin', exchange_type='direct')
     
     #Creating classrooms queue and binding to goodwin exchange
-    channel.queue_declare(queue='Classrooms', exclusive=True)
+    channel.queue_declare(queue='Classrooms')
     channel.queue_bind(exchange='Goodwin', queue='Classrooms', routing_key='Classrooms')
     listPairExQu.append("Goodwin:Classrooms")
  
     #Creating auditorium queue and binding to goodwin exchange
-    channel.queue_declare(queue='Auditorium', exclusive=True)
+    channel.queue_declare(queue='Auditorium')
     channel.queue_bind(exchange='Goodwin', queue='Auditorium', routing_key='Auditorium')
     listPairExQu.append("Goodwin:Auditorium")
  
@@ -65,17 +65,17 @@ def rabbit_set_up(IP, PORT) :
     channel.exchange_declare(exchange='Library', exchange_type='direct')
     
     #Creating noise queue and binding to library exchange
-    channel.queue_declare(queue='Noise', exclusive=True)
+    channel.queue_declare(queue='Noise')
     channel.queue_bind(exchange='Library', queue='Noise', routing_key='Noise')
     listPairExQu.append("Library:Noise")
  
     #Creating seating queue and binding to library exchange
-    channel.queue_declare(queue='Seating', exclusive=True)
+    channel.queue_declare(queue='Seating')
     channel.queue_bind(exchange='Library', queue='Seating', routing_key='Seating')
     listPairExQu.append("Library:Seating")
  
     #Creating wishes queue and binding to library exchange
-    channel.queue_declare(queue='Wishes', exclusive=True)
+    channel.queue_declare(queue='Wishes')
     channel.queue_bind(exchange='Library', queue='Wishes', routing_key='Wishes')
     listPairExQu.append("Library:Wishes")
  
@@ -239,9 +239,9 @@ if __name__ == '__main__':
                 # If there is, access the basic consumption method to callback, else, do NOT consume since it will put the program into an infinite loop
                 queue_state = channel.queue_declare(subject, durable=True, passive=True)
                 queue_empty = queue_state.method.message_count == 0
+                
                 if not queue_empty:
                     channel.basic_consume(on_message_callback=callback, queue=subject, auto_ack=True)
-                    
                     channel.start_consuming()
                     print("[Ctrl 07] - Consumed message '" + CALLBACK_BODY + "' on <" + place.upper() + ":" + subject.upper() + ">")
                 else:
